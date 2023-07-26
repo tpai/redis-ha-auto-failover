@@ -1,0 +1,104 @@
+version: '3.9'
+services:
+  nginx:
+    image: nginx:latest
+    network_mode: host
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - sentinel1-proxy
+      - sentinel2-proxy
+      - sentinel3-proxy
+
+  redis-master:
+    image: redis:alpine
+    network_mode: host
+    container_name: redis-master
+
+  redis-slave1:
+    image: redis:alpine
+    network_mode: host
+    command: redis-server --port 6380 --slaveof 0.0.0.0 6379
+    container_name: redis-slave1
+    depends_on:
+      - redis-master
+
+  redis-slave2:
+    image: redis:alpine
+    network_mode: host
+    command: redis-server --port 6381 --slaveof 0.0.0.0 6379
+    container_name: redis-slave2
+    depends_on:
+      - redis-master
+
+  redis-sentinel1:
+    image: redis:alpine
+    network_mode: host
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    container_name: redis-sentinel1
+    restart: always
+    volumes:
+      - ./sentinel1.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+
+  redis-sentinel2:
+    image: redis:alpine
+    network_mode: host
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    container_name: redis-sentinel2
+    restart: always
+    volumes:
+      - ./sentinel2.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+
+  redis-sentinel3:
+    image: redis:alpine
+    network_mode: host
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    container_name: redis-sentinel3
+    restart: always
+    volumes:
+      - ./sentinel3.conf:/usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis-master
+      - redis-slave1
+      - redis-slave2
+
+  sentinel1-proxy:
+    image: flant/redis-sentinel-proxy:v2.0
+    network_mode: host
+    entrypoint: redis-sentinel-proxy -listen 0.0.0.0:6370 -sentinel :26379 -master mymaster
+    container_name: sentinel1-proxy
+    restart: always
+    depends_on:
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
+
+  sentinel2-proxy:
+    image: flant/redis-sentinel-proxy:v2.0
+    network_mode: host
+    entrypoint: redis-sentinel-proxy -listen 0.0.0.0:6371 -sentinel :26380 -master mymaster
+    container_name: sentinel2-proxy
+    restart: always
+    depends_on:
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
+
+  sentinel3-proxy:
+    image: flant/redis-sentinel-proxy:v2.0
+    network_mode: host
+    entrypoint: redis-sentinel-proxy -listen 0.0.0.0:6372 -sentinel :26381 -master mymaster
+    container_name: sentinel3-proxy
+    restart: always
+    depends_on:
+      - redis-sentinel1
+      - redis-sentinel2
+      - redis-sentinel3
