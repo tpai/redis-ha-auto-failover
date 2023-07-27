@@ -1,5 +1,7 @@
 # Redis High Availability (HA) Auto-Failover Verification
 
+![redis-ha](redis-ha.png)
+
 This project is to verify the auto-failover functionality of a Redis High Availability (HA).
 
 ## Project Structure
